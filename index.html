@@ -125,6 +125,8 @@
     </div>
 
     <div id="overlay" class="overlay"></div>
+    <div id="pauseNotice" style="position:absolute; left:50%; top:40%; transform:translateX(-50%); background:rgba(120,120,120,0.6); color:#fff; padding:12px 20px; border-radius:10px; font-weight:700; font-size:22px; display:none; z-index:40">Pause</div>
+    <div id="endNotice" style="position:absolute; left:50%; top:18%; transform:translateX(-50%); background:rgba(0,0,0,0.55); color:#fff; padding:10px 14px; border-radius:10px; border:1px solid rgba(255,255,255,0.25); font-weight:600; display:none; z-index:30">Die Versuchszeit ist zu Ende. Starte den Versuch neu.</div>
     <div id="skyIcon" class="skyIcon sun"></div>
 
     <div class="plant" id="plant">
@@ -252,13 +254,13 @@
     d.style.setProperty('--toX', toCenter+'px');
     d.style.animation='waterFlowSurface 3.5s linear forwards';
     overlay.appendChild(d);
-    setTimeout(()=>d.remove(), 3500);
-  }
+    d.addEventListener('animationend', ()=>d.remove());
+}
   function startWater(){
     if(waterTimer) return;
     spawnWaterOnce(); // immediate visual
-    waterTimer=setInterval(()=>{ if(onWater && running && !finished){ spawnWaterOnce(); } }, 1400);
-  }
+    waterTimer=setInterval(()=>{ if(onWater && running && !finished && !paused){ spawnWaterOnce(); } }, 1400);
+}
   function stopWater(){ if(waterTimer){ clearInterval(waterTimer); waterTimer=null; } }
 
   // CO2: spawn immediately and at interval while ON; motion pauses when global pause is active
@@ -302,11 +304,16 @@
   function startCO2(){
     if(co2Timer) return;
     spawnCO2Once(); // immediate visual
-    co2Timer=setInterval(()=>{ if(onCO2 && running && !finished){ spawnCO2Once(); } }, 950);
-  }
+    co2Timer=setInterval(()=>{ if(onCO2 && running && !finished && !paused){ spawnCO2Once(); } }, 950);
+}
   function stopCO2(){ if(co2Timer){ clearInterval(co2Timer); co2Timer=null; } }
 
-  // O2 from leaves + Sugar within leaves or into stem (internal)
+  function setAnimationsPaused(isPaused){
+  const els = Array.from(overlay.querySelectorAll('.waterDrop, .o2, .sugar, .ray'));
+  els.forEach(el=>{ el.style.animationPlayState = isPaused ? 'paused' : 'running'; });
+}
+
+// O2 from leaves + Sugar within leaves or into stem (internal)
   function spawnO2FromLeaf(leaf){
     const stageR=stage.getBoundingClientRect();
     const lr=leaf.getBoundingClientRect();
@@ -319,7 +326,7 @@
     p.style.setProperty('--dx',dx+'px'); p.style.setProperty('--dy',dy+'px');
     p.style.animation='o2Out 2.4s linear forwards';
     overlay.appendChild(p);
-    setTimeout(()=>p.remove(),2500);
+    p.addEventListener('animationend', ()=>{ if(!paused) p.remove(); });
   }
 
   function spawnSugar(leaf){
@@ -338,7 +345,7 @@
       p.style.setProperty('--dyLeaf', dy+'px');
       p.style.animation='sugarLeafJitter 1.2s ease-out forwards';
       overlay.appendChild(p);
-      setTimeout(()=>p.remove(), 1300);
+      p.addEventListener('animationend', ()=>{ if(!paused) p.remove(); });
     } else {
       // leaf base -> stem edge -> then ALWAYS downwards inside stem
       const baseX=(lr.left - stageR.left) + (leaf.classList.contains('left')? 6 : lr.width-6);
@@ -359,7 +366,7 @@
         p2.style.setProperty('--dyDown', dyDown+'px');
         p2.style.animation='sugarDownStem 0.9s linear forwards';
         overlay.appendChild(p2);
-        setTimeout(()=>p2.remove(), 1000);
+        p2.addEventListener('animationend', ()=>{ if(!paused) p2.remove(); });
       }, 520);
     }
   }
@@ -395,8 +402,8 @@
     const dtY=dt*YEARS_PER_SECOND;
     if(!finished){
       tYears += dtY;
-      if(tYears >= YEARS){
-        tYears=YEARS; finished=true; running=false; enableResourceButtons(false);
+      if(tYears >= YEARS){ tYears=YEARS; finished=true; running=false; enableResourceButtons(false);
+        const endNote = document.getElementById('endNotice'); if(endNote) endNote.style.display='block';
         pauseBtn.disabled=true; startBtn.disabled=true; resetBtn.disabled=false;
         if(waterTimer) clearInterval(waterTimer);
         if(co2Timer) clearInterval(co2Timer);
@@ -418,9 +425,11 @@
   pauseBtn.addEventListener('click', ()=>{
     if(finished) return; paused=!paused;
     pauseBtn.textContent = paused ? '▶️ Weiter' : '⏸️ Pause';
+    setAnimationsPaused(paused);
+    const pauseNote=document.getElementById('pauseNotice'); if(pauseNote) pauseNote.style.display = paused? 'block':'none';
     if(!paused){ rafLast=0; }
   });
-  resetBtn.addEventListener('click', ()=>{
+resetBtn.addEventListener('click', ()=>{
     tYears=0; plantKg=START_PLANT; soilKg=START_SOIL; leafGrowth=0;
     onLight=onWater=onCO2=false; running=false; finished=false; paused=false;
     [btnLight,btnWater,btnCO2].forEach(b=>{ b.disabled=true; b.classList.remove('active'); const label=b.textContent.split(':')[0]; b.innerHTML=label+': <b>aus</b>'; });
@@ -429,7 +438,7 @@
     if(co2Timer) clearInterval(co2Timer);
     if(particleTimer) clearInterval(particleTimer);
     startBtn.disabled=false; pauseBtn.disabled=true; pauseBtn.textContent='⏸️ Pause';
-    overlay.innerHTML=''; updateUI();
+    overlay.innerHTML=''; const endNote=document.getElementById('endNotice'); if(endNote) endNote.style.display='none'; const pauseNote=document.getElementById('pauseNotice'); if(pauseNote) pauseNote.style.display='none'; setAnimationsPaused(false); updateUI();
   });
 
   btnLight.addEventListener('click', ()=>{
