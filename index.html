@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Wann wachsen Pflanzen?</title>
+<title>Was brauchen Pflanzen zum Wachsen?</title>
 <style>
   :root{
     --panel:#0f1a2f;
@@ -66,7 +66,7 @@
   .soilLine{position:absolute; left:0; right:0; bottom:220px; height:2px; background:#5d4128; opacity:.98; z-index:6}
 
   /* Plant */
-  .plant{position:absolute; left:50%; bottom:220px; width:240px; height:340px; transform-origin:50% 100%; transform:translateX(-50%) rotate(180deg) scale(.35); z-index:7}
+  .plant{position:absolute; left:50%; bottom:220px; width:240px; height:340px; transform-origin:50% 100%; transform:translateX(-50%) scale(.35); z-index:7}
   .stem{position:absolute; left:50%; bottom:0; transform:translateX(-50%) rotate(180deg); width:22px; height:240px; background:linear-gradient(180deg,#8b5a2b,#5c3d1e); border-radius:16px}
 
   /* Growing root (under soil): main + two branches */
@@ -88,7 +88,7 @@
 <body>
 <div class="wrap">
   <div class="panel">
-    <h1>Wann wachsen Pflanzen?</h1>
+    <h1>Was brauchen Pflanzen zum Wachsen?</h1>
 
     <div class="controls">
       <button id="start" class="btn primary">▶️ Start</button>
@@ -101,16 +101,13 @@
       <button id="btnWater" class="btn" disabled>💧 Wasser: <b>aus</b></button>
       <button id="btnCO2"   class="btn" disabled>🌬️ Kohlenstoffdioxid: <b>aus</b></button>
     </div>
-
     <div class="card">
       <div class="kv"><span>Zeit</span><span id="timeLabel">0,00 Jahre (0:00)</span></div>
     </div>
     <div class="card">
-      <div class="kv big"><span>Pflanzenmasse</span><span id="plantMassLabel">0,20 kg</span></div>
+      <div class="kv big"><span>Gewicht der Pflanze</span><span id="plantMassLabel">0,20 kg</span></div>
     </div>
-    <div class="card">
-      <div class="kv big"><span>Erde</span><span id="soilMassLabel">10,00 kg</span></div>
-    </div>
+
   </div>
 
   <div class="panel canvas" id="stage">
@@ -153,20 +150,18 @@
 
   const startBtn=$('#start'), pauseBtn=$('#pause'), resetBtn=$('#reset');
   const btnLight=$('#btnLight'), btnWater=$('#btnWater'), btnCO2=$('#btnCO2');
-  const timeLabel=$('#timeLabel'), plantMassLabel=$('#plantMassLabel'), soilMassLabel=$('#soilMassLabel');
+  const timeLabel=$('#timeLabel'), plantMassLabel=$('#plantMassLabel');
 
   const stage=$('#stage'), overlay=$('#overlay'), plant=$('#plant'), skyIcon=$('#skyIcon');
   const rootWrap=$('#rootWrap'), rootMain=$('#rootMain'), rootLeft=$('#rootLeft'), rootRight=$('#rootRight');
 
   const START_PLANT=0.2, END_PLANT=8.0, START_SOIL=10.0, END_SOIL_MIN=9.9, YEARS=5;
   const YEARS_TOTAL_SECONDS=180, YEARS_PER_SECOND=YEARS/YEARS_TOTAL_SECONDS;
-  const IDEAL_GROWTH_PER_YEAR=(END_PLANT-START_PLANT)/YEARS;
-  const SOIL_LOSS_PER_YEAR_WHEN_WATER=(START_SOIL-END_SOIL_MIN)/YEARS;
-  const PARTICLE_INTERVAL_MS=1050;
+  const IDEAL_GROWTH_PER_YEAR=(END_PLANT-START_PLANT)/YEARS;const PARTICLE_INTERVAL_MS=1050;
   const ROOT_MAX=200; // px
   const ROOT_BASE=28; // initial main length
 
-  let tYears=0, plantKg=START_PLANT, soilKg=START_SOIL;
+  let tYears=0, plantKg=START_PLANT;
   let onLight=false, onWater=false, onCO2=false;
   let running=false, finished=false, paused=false;
   let rafLast=0, particleTimer=null, waterTimer=null, co2Timer=null;
@@ -209,9 +204,7 @@
 
   function updateUI(){
     timeLabel.textContent = tYears.toFixed(2).replace('.',',')+' Jahre ('+mmss(tYears/YEARS_PER_SECOND)+')';
-    plantMassLabel.textContent = kg(plantKg);
-    soilMassLabel.textContent = soilKg.toFixed(2).replace('.',',')+' kg';
-    const scale=0.35+(plantKg/END_PLANT)*0.9;
+    plantMassLabel.textContent = kg(plantKg);const scale=0.35+(plantKg/END_PLANT)*0.9;
     plant.style.transform='translateX(-50%) scale('+scale+')';
     sizeLeafs();
     updateRoot();
@@ -383,11 +376,7 @@
   }
 
   function updateMasses(dtY){
-    if(!finished && onWater){
-      soilKg -= SOIL_LOSS_PER_YEAR_WHEN_WATER*dtY;
-      if(soilKg < END_SOIL_MIN) soilKg=END_SOIL_MIN;
-    }
-    if(soilKg > START_SOIL) soilKg=START_SOIL;
+    
     if(productionActive()){
       plantKg = Math.min(END_PLANT, plantKg + IDEAL_GROWTH_PER_YEAR*dtY);
       leafGrowth = Math.min(1, leafGrowth + dtY/YEARS);
@@ -430,7 +419,7 @@
     if(!paused){ rafLast=0; }
   });
 resetBtn.addEventListener('click', ()=>{
-    tYears=0; plantKg=START_PLANT; soilKg=START_SOIL; leafGrowth=0;
+    tYears=0; plantKg=START_PLANT; leafGrowth=0;
     onLight=onWater=onCO2=false; running=false; finished=false; paused=false;
     [btnLight,btnWater,btnCO2].forEach(b=>{ b.disabled=true; b.classList.remove('active'); const label=b.textContent.split(':')[0]; b.innerHTML=label+': <b>aus</b>'; });
     setLight(false);
